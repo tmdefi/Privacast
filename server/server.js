@@ -6,6 +6,10 @@ const { router: authRouter } = require('./routes/auth');
 const predictionsRouter = require('./routes/predictions');
 const leaderboardRouter = require('./routes/leaderboard');
 
+// Import FHE proxy handlers
+const publicKeyHandler = require('../api/fhe/public-key');
+const encryptHandler = require('../api/fhe/encrypt');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -20,6 +24,10 @@ app.use(express.static(path.join(__dirname, '..')));
 app.use('/api/auth', authRouter);
 app.use('/api/predictions', predictionsRouter);
 app.use('/api/leaderboard', leaderboardRouter);
+
+// FHE proxy routes (proxies to Zama relayer to avoid CORS)
+app.use('/api/fhe/public-key', publicKeyHandler);
+app.use('/api/fhe/encrypt', encryptHandler);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', stage: 2 }));
@@ -46,5 +54,7 @@ app.listen(PORT, () => {
     GET  /api/predictions
     POST /api/predictions
     GET  /api/leaderboard
+    GET  /api/fhe/public-key
+    POST /api/fhe/encrypt
   `);
 });
