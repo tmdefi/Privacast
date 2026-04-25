@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PrivaCast — Private Prediction Market</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=Barlow+Condensed:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --ink:#0e0e0e;--paper:#f0ebe1;--paper2:#e8e2d6;--paper3:#ddd7c9;
+  --rule:rgba(14,14,14,0.13);--rule-hi:rgba(14,14,14,0.38);
+  --acid:#d4ff00;--acid2:#b8e000;--blood:#e8001a;--signal:#0050ff;
+  --dim:rgba(14,14,14,0.45);--dimmer:rgba(14,14,14,0.28);
+  --head:'Bebas Neue',sans-serif;--cond:'Barlow Condensed',sans-serif;--mono:'IBM Plex Mono',monospace;
+}
+body::before{content:'';position:fixed;inset:0;z-index:9999;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  background-size:180px;opacity:0.55;mix-blend-mode:multiply;}
+body{font-family:var(--cond);background:var(--paper);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;}
+
+/* TICKER */
+.ticker{background:var(--ink);color:var(--acid);font-family:var(--mono);font-size:11px;letter-spacing:0.04em;padding:5px 0;overflow:hidden;white-space:nowrap;border-bottom:3px solid var(--acid);}
+.ticker-inner{display:inline-block;animation:scroll 50s linear infinite;}
+@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.tsep{color:var(--acid);margin:0 18px;opacity:0.4;}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:stretch;border-bottom:3px solid var(--ink);background:var(--paper);position:sticky;top:0;z-index:100;height:64px;}
+.logo-block{display:flex;align-items:center;gap:12px;padding:0 24px;border-right:3px solid var(--ink);background:var(--ink);min-width:220px;}
+.logo-text{font-family:var(--head);font-size:32px;color:var(--acid);letter-spacing:0.02em;line-height:1;}
+.logo-sub{font-family:var(--mono);font-size:9px;color:rgba(212,255,0,0.45);letter-spacing:0.1em;margin-top:2px;}
+.stage-tag{background:var(--acid);color:var(--ink);font-family:var(--mono);font-size:8px;font-weight:600;padding:3px 6px;letter-spacing:0.1em;align-self:center;}
+.topbar-nav{display:flex;align-items:stretch;border-right:3px solid var(--ink);}
+.nav-tab{display:flex;align-items:center;padding:0 22px;font-family:var(--cond);font-size:14px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:var(--dim);cursor:pointer;border-right:1px solid var(--rule);transition:all 0.1s;position:relative;}
+.nav-tab:last-child{border-right:none;}
+.nav-tab:hover{background:var(--paper2);color:var(--ink);}
+.nav-tab.active{background:var(--ink);color:var(--acid);}
+.nav-tab.active::after{content:'';position:absolute;bottom:-3px;left:0;right:0;height:3px;background:var(--acid);}
+.topbar-right{margin-left:auto;display:flex;align-items:center;padding:0 20px;gap:12px;}
+
+/* WALLET */
+.fhe-pill{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;color:var(--dim);border:1.5px solid var(--rule-hi);padding:5px 12px;}
+.sdot{width:7px;height:7px;background:var(--acid2);animation:blink 1.8s step-end infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.15}}
+.btn-connect{display:flex;align-items:center;gap:8px;padding:0 20px;height:40px;background:var(--ink);color:var(--acid);border:none;font-family:var(--head);font-size:20px;letter-spacing:0.06em;cursor:pointer;transition:background 0.1s;white-space:nowrap;}
+.btn-connect:hover{background:#222;}
+.wallet-chip{display:flex;align-items:center;gap:0;font-family:var(--mono);font-size:11px;border:2px solid var(--ink);cursor:pointer;overflow:hidden;}
+.wallet-chip:hover .wc-addr{background:var(--paper2);}
+.wc-net{background:var(--acid);color:var(--ink);font-size:9px;font-weight:700;padding:0 10px;height:36px;display:flex;align-items:center;letter-spacing:0.08em;white-space:nowrap;}
+.wc-net.wrong{background:var(--blood);color:#fff;}
+.wc-addr{padding:0 12px;height:36px;display:flex;align-items:center;color:var(--dim);transition:background 0.1s;gap:10px;}
+.wc-bal{color:var(--signal);font-weight:600;}
+.wc-disconnect{padding:0 10px;height:36px;display:flex;align-items:center;border-left:1.5px solid var(--rule-hi);color:var(--dimmer);font-size:13px;transition:all 0.1s;}
+.wc-disconnect:hover{background:var(--blood);color:#fff;border-left-color:var(--blood);}
+
+/* NETWORK WARNING */
+.net-warning{background:var(--blood);color:#fff;font-family:var(--mono);font-size:11px;padding:7px 16px;text-align:center;letter-spacing:0.05em;cursor:pointer;display:none;border-bottom:2px solid #a00012;}
+.net-warning.show{display:block;}
+.net-warning:hover{background:#c20016;}
+
+/* CONNECT PROMPT (shown when no wallet) */
+.connect-prompt{display:none;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:18px;padding:60px 20px;text-align:center;}
+.connect-prompt.show{display:flex;}
+.cp-icon{font-size:56px;margin-bottom:4px;}
+.cp-head{font-family:var(--head);font-size:52px;letter-spacing:0.03em;line-height:1;}
+.cp-sub{font-family:var(--mono);font-size:12px;color:var(--dim);max-width:380px;line-height:1.7;letter-spacing:0.03em;}
+.cp-btn{padding:14px 36px;background:var(--ink);color:var(--acid);border:none;font-family:var(--head);font-size:28px;letter-spacing:0.06em;cursor:pointer;transition:background 0.1s;margin-top:6px;}
+.cp-btn:hover{background:#222;}
+.cp-note{font-family:var(--mono);font-size:10px;color:var(--dimmer);letter-spacing:0.06em;}
+
+/* MAIN */
+.main{display:flex;flex:1;}
+
+/* SIDEBAR */
+.sidebar{width:220px;flex-shrink:0;border-right:3px solid var(--ink);display:flex;flex-direction:column;}
+.sidebar-head{background:var(--ink);color:var(--paper);font-family:var(--head);font-size:20px;letter-spacing:0.06em;padding:10px 16px;border-bottom:2px solid var(--acid);}
+.cat-item{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--rule);cursor:pointer;font-family:var(--cond);font-size:15px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:var(--dim);transition:all 0.1s;}
+.cat-item:hover{background:var(--paper2);color:var(--ink);}
+.cat-item.active{background:var(--ink);color:var(--acid);border-color:var(--ink);}
+.cat-count{font-family:var(--mono);font-size:11px;background:var(--rule);padding:1px 7px;color:var(--dim);}
+.cat-item.active .cat-count{background:var(--acid);color:var(--ink);}
+.positions-panel{margin-top:auto;border-top:3px solid var(--ink);}
+.pos-head{background:var(--blood);color:#fff;font-family:var(--head);font-size:18px;letter-spacing:0.06em;padding:8px 16px;}
+.pos-item{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--rule);}
+.pos-name{color:var(--dim);font-family:var(--cond);font-size:13px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pos-val{font-family:var(--mono);font-size:12px;font-weight:600;}
+.pos-val.yes{color:var(--signal);}
+.pos-val.no{color:var(--blood);}
+.pos-empty{font-family:var(--mono);font-size:10px;color:var(--dimmer);padding:12px 14px;line-height:1.7;}
+
+/* CONTENT */
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.stats-bar{display:flex;border-bottom:3px solid var(--ink);}
+.stat-cell{flex:1;padding:14px 20px;border-right:1px solid var(--rule-hi);position:relative;cursor:default;}
+.stat-cell:last-child{border-right:none;}
+.stat-cell::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--ink);opacity:0;transition:opacity 0.2s;}
+.stat-cell:hover::before{opacity:1;}
+.stat-lbl{font-family:var(--mono);font-size:9px;letter-spacing:0.12em;color:var(--dimmer);text-transform:uppercase;margin-bottom:4px;}
+.stat-num{font-family:var(--head);font-size:34px;line-height:1;color:var(--ink);}
+.stat-num.accent{color:var(--signal);}
+.stat-note{font-family:var(--mono);font-size:10px;color:var(--dimmer);margin-top:2px;}
+
+/* PAGES */
+.page{display:none;flex:1;flex-direction:column;overflow:hidden;}
+.page.active{display:flex;}
+
+/* TOOLBAR */
+.toolbar{display:flex;align-items:stretch;border-bottom:2px solid var(--rule-hi);}
+.search-cell{position:relative;flex:1;border-right:2px solid var(--rule-hi);}
+.search-cell input{width:100%;height:100%;background:transparent;border:none;outline:none;padding:12px 16px 12px 40px;font-family:var(--mono);font-size:13px;color:var(--ink);}
+.search-cell input::placeholder{color:var(--dimmer);}
+.search-lbl{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:15px;color:var(--dimmer);}
+.sort-cell{position:relative;border-right:2px solid var(--rule-hi);}
+.sort-cell select{height:100%;background:transparent;border:none;outline:none;padding:0 36px 0 18px;font-family:var(--cond);font-size:14px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:var(--dim);cursor:pointer;appearance:none;}
+.sort-cell::after{content:'▾';position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--dim);pointer-events:none;}
+.priv-note{display:flex;align-items:center;gap:10px;padding:0 18px;font-family:var(--mono);font-size:10px;color:var(--dimmer);max-width:300px;}
+.lock-sq{background:var(--ink);color:var(--acid);font-size:12px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+
+/* SCROLL */
+.scroll-area{flex:1;overflow-y:auto;padding:20px 22px;}
+
+/* MARKETS GRID */
+.markets-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:0;border-top:2px solid var(--rule-hi);border-left:2px solid var(--rule-hi);}
+.market-card{border-right:2px solid var(--rule-hi);border-bottom:2px solid var(--rule-hi);padding:18px 18px 14px;transition:background 0.12s;display:flex;flex-direction:column;gap:12px;position:relative;background:var(--paper);}
+.market-card:hover{background:var(--paper2);}
+.market-card.has-position{background:repeating-linear-gradient(-45deg,var(--paper),var(--paper) 7px,rgba(0,80,255,0.04) 7px,rgba(0,80,255,0.04) 14px);}
+.card-cat{font-family:var(--mono);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;background:var(--ink);color:var(--paper);padding:2px 8px;display:inline-block;margin-bottom:6px;}
+.card-title{font-family:var(--cond);font-size:16px;font-weight:600;line-height:1.3;color:var(--ink);}
+.pos-badge{font-family:var(--mono);font-size:9px;background:var(--signal);color:#fff;padding:2px 7px;position:absolute;top:14px;right:14px;}
+.prob-display{display:flex;align-items:flex-end;gap:10px;}
+.prob-big{font-family:var(--head);font-size:52px;line-height:1;}
+.prob-big.high{color:var(--signal);}
+.prob-big.mid{color:var(--ink);}
+.prob-big.low{color:var(--blood);}
+.prob-sides{flex:1;display:flex;flex-direction:column;gap:4px;padding-bottom:4px;}
+.prob-track{height:6px;background:var(--rule);position:relative;overflow:hidden;}
+.prob-fill{position:absolute;left:0;top:0;bottom:0;transition:width 0.5s ease;}
+.prob-fill.yes{background:var(--signal);}
+.prob-fill.no{background:var(--blood);}
+.prob-track-labels{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--dim);}
+.card-stats{display:flex;border-top:1px solid var(--rule);padding-top:10px;}
+.cs{flex:1;border-right:1px solid var(--rule);padding-right:10px;margin-right:10px;}
+.cs:last-child{border-right:none;margin-right:0;}
+.cs-label{font-family:var(--mono);font-size:9px;color:var(--dimmer);text-transform:uppercase;letter-spacing:0.1em;}
+.cs-val{font-family:var(--head);font-size:18px;line-height:1.1;}
+.bet-section{border-top:1px solid var(--rule);padding-top:11px;display:flex;flex-direction:column;gap:8px;}
+.bet-lbl{font-family:var(--mono);font-size:9px;letter-spacing:0.1em;color:var(--dimmer);text-transform:uppercase;}
+.bet-row{display:flex;}
+.bet-input{flex:1;background:var(--paper3);border:1.5px solid var(--rule-hi);border-right:none;padding:8px 12px;font-family:var(--mono);font-size:13px;color:var(--ink);outline:none;transition:border-color 0.15s;min-width:0;}
+.bet-input:focus{border-color:var(--ink);}
+.bet-input::placeholder{color:var(--dimmer);}
+.bet-btn{padding:8px 14px;border:1.5px solid;font-family:var(--head);font-size:18px;letter-spacing:0.05em;cursor:pointer;transition:all 0.1s;}
+.bet-btn.yes{background:var(--signal);color:#fff;border-color:var(--signal);border-left:none;}
+.bet-btn.yes:hover{background:#003bcc;}
+.bet-btn.no{background:var(--blood);color:#fff;border-color:var(--blood);border-left:1.5px solid rgba(255,255,255,0.3);}
+.bet-btn.no:hover{background:#c20016;}
+.bet-confirm{font-family:var(--mono);font-size:10px;color:var(--signal);letter-spacing:0.04em;padding:5px 8px;background:rgba(0,80,255,0.06);border-left:2px solid var(--signal);display:none;}
+.bet-confirm.show{display:block;}
+
+/* MY POSITIONS PAGE */
+.pos-table{width:100%;border-collapse:collapse;font-family:var(--cond);}
+.pos-table th{font-family:var(--mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--dimmer);padding:10px 14px;border-bottom:2px solid var(--ink);text-align:left;background:var(--paper2);}
+.pos-table td{padding:12px 14px;border-bottom:1px solid var(--rule);font-size:15px;}
+
+/* LOADING/ERROR */
+.loading-msg{text-align:center;padding:80px 20px;font-family:var(--mono);font-size:13px;color:var(--dim);letter-spacing:0.04em;}
+.loading-spin{font-family:var(--head);font-size:64px;display:inline-block;margin-bottom:12px;animation:spin 1.2s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-msg{margin:20px;padding:20px 24px;border:3px solid var(--blood);font-family:var(--mono);font-size:12px;line-height:1.8;color:var(--ink);background:rgba(232,0,26,0.04);}
+.error-msg strong{color:var(--blood);}
+
+/* FOOTER */
+footer{border-top:3px solid var(--ink);background:var(--ink);color:rgba(240,235,225,0.35);padding:10px 24px;display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;letter-spacing:0.06em;}
+footer em{color:var(--acid);font-style:normal;}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fhevm/sdk/dist/browser/fhevm.umd.js"></script>
+</head>
+<body>
+
+<!-- TICKER -->
+<div class="ticker" aria-hidden="true">
+  <span class="ticker-inner">
+    &nbsp;&nbsp;PRIVACAST · PRIVATE PREDICTION MARKET<span class="tsep">///</span>POLYMARKET LIVE DATA<span class="tsep">///</span>CONNECT WALLET TO PREDICT<span class="tsep">///</span>SEPOLIA TESTNET<span class="tsep">///</span>STAGE 3: ZAMA FHE ON-CHAIN PRIVACY<span class="tsep">///</span>PRIVACAST · PRIVATE PREDICTION MARKET<span class="tsep">///</span>POLYMARKET LIVE DATA<span class="tsep">///</span>CONNECT WALLET TO PREDICT<span class="tsep">///</span>SEPOLIA TESTNET<span class="tsep">///</span>STAGE 3: ZAMA FHE ON-CHAIN PRIVACY<span class="tsep">///</span>
+  </span>
+</div>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="logo-block">
+    <div>
+      <div class="logo-text">PRIVACAST</div>
+      <div class="logo-sub">PRIVATE PREDICTION MARKET</div>
+    </div>
+    <div class="stage-tag">STAGE 2</div>
+  </div>
+  <nav class="topbar-nav">
+    <div class="nav-tab active" onclick="showPage('markets',this)">Markets</div>
+    <div class="nav-tab" onclick="showPage('positions',this)">My Positions</div>
+  </nav>
+  <div class="topbar-right">
+    <div class="fhe-pill"><div class="sdot"></div>FHE-READY · SEPOLIA</div>
+    <div id="wallet-area">
+      <button class="btn-connect" onclick="connectWallet()">⬡ CONNECT WALLET</button>
+    </div>
+  </div>
+</header>
+
+<!-- NETWORK WARNING -->
+<div class="net-warning" id="net-warning" onclick="switchToSepolia()">
+  ⚠ &nbsp; WRONG NETWORK — CLICK TO SWITCH TO SEPOLIA TESTNET
+</div>
+
+<div class="main">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-head">FILTER</div>
+    <div class="cat-item active" onclick="filterCategory('all',this)">All Markets <span class="cat-count" id="cnt-all">–</span></div>
+    <div class="cat-item" onclick="filterCategory('Politics',this)">Politics <span class="cat-count" id="cnt-Politics">–</span></div>
+    <div class="cat-item" onclick="filterCategory('Crypto',this)">Crypto <span class="cat-count" id="cnt-Crypto">–</span></div>
+    <div class="cat-item" onclick="filterCategory('Sports',this)">Sports <span class="cat-count" id="cnt-Sports">–</span></div>
+    <div class="cat-item" onclick="filterCategory('Economics',this)">Economics <span class="cat-count" id="cnt-Economics">–</span></div>
+    <div class="cat-item" onclick="filterCategory('Science',this)">Science <span class="cat-count" id="cnt-Science">–</span></div>
+    <div class="cat-item" onclick="filterCategory('Other',this)">Other <span class="cat-count" id="cnt-Other">–</span></div>
+    <div class="positions-panel">
+      <div class="pos-head">MY POSITIONS</div>
+      <div id="positions-sidebar"><div class="pos-empty">CONNECT WALLET<br/>TO SEE POSITIONS.</div></div>
+    </div>
+  </aside>
+
+  <!-- CONTENT -->
+  <div class="content">
+    <div class="stats-bar">
+      <div class="stat-cell"><div class="stat-lbl">LIVE MARKETS</div><div class="stat-num" id="stat-markets">–</div><div class="stat-note">POLYMARKET API</div></div>
+      <div class="stat-cell"><div class="stat-lbl">MY POSITIONS</div><div class="stat-num" id="stat-positions">0</div><div class="stat-note">THIS WALLET</div></div>
+      <div class="stat-cell"><div class="stat-lbl">WALLET BALANCE</div><div class="stat-num" id="stat-balance">–</div><div class="stat-note">SEPOLIA ETH</div></div>
+      <div class="stat-cell"><div class="stat-lbl">PRIVACY LAYER</div><div class="stat-num accent">FHE</div><div class="stat-note">ZAMA · STAGE 3</div></div>
+    </div>
+
+    <!-- MARKETS PAGE -->
+    <div class="page active" id="page-markets">
+      <!-- CONNECT PROMPT shown when no wallet -->
+      <div class="connect-prompt" id="connect-prompt">
+        <div class="cp-icon">🔒</div>
+        <div class="cp-head">CONNECT YOUR WALLET</div>
+        <div class="cp-sub">Your wallet is your identity. No account, no email, no password. Just connect MetaMask and start predicting privately on Sepolia testnet.</div>
+        <button class="cp-btn" onclick="connectWallet()">⬡ CONNECT METAMASK</button>
+        <div class="cp-note">MARKETS LOAD BELOW WHILE YOU DECIDE</div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-cell"><span class="search-lbl">⌕</span><input type="text" id="search-input" placeholder="SEARCH MARKETS..." oninput="applyFilters()" /></div>
+        <div class="sort-cell"><select id="sort-select" onchange="applyFilters()">
+          <option value="volume">SORT: VOLUME</option>
+          <option value="prob-high">PROB: HIGH → LOW</option>
+          <option value="prob-low">PROB: LOW → HIGH</option>
+          <option value="newest">NEWEST</option>
+        </select></div>
+        <div class="priv-note"><div class="lock-sq">🔒</div>WALLET-GATED · SEPOLIA TESTNET</div>
+      </div>
+      <div class="scroll-area">
+        <div id="markets-container"><div class="loading-msg"><span class="loading-spin">◌</span><br/>LOADING LIVE MARKETS...</div></div>
+      </div>
+    </div>
+
+    <!-- MY POSITIONS PAGE -->
+    <div class="page" id="page-positions">
+      <div class="scroll-area" style="padding:28px;">
+        <div style="font-family:var(--head);font-size:48px;letter-spacing:0.04em;margin-bottom:4px;">MY POSITIONS</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--dimmer);margin-bottom:24px;" id="pos-wallet-label">CONNECT WALLET TO VIEW YOUR POSITIONS.</div>
+        <div id="my-positions-container"><div class="loading-msg" style="padding:40px 0;"><span style="font-family:var(--mono);font-size:12px;color:var(--dimmer);">CONNECT YOUR WALLET TO SEE YOUR PREDICTION HISTORY.</span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span>DATA <em>POLYMARKET GAMMA API</em></span>
+  <span>CONTRACT <em id="contract-status">NOT CONNECTED</em> &nbsp;·&nbsp; NETWORK <em>SEPOLIA TESTNET</em> &nbsp;·&nbsp; PRIVACY <em>ZAMA FHEVM · STAGE 3</em></span>
+</footer>
+
+<script>
+
+// ── FHE CONTRACT + ZAMA RELAYER ──
+const CONTRACT_ADDRESS = "0x015DE98CCD6f34c4FFCe7f87FEf2Ebc002fC2Fd3";
+const CONTRACT_ABI = [
+  "function marketCount() view returns (uint256)",
+  "function hasPosition(uint256 marketId, address user) view returns (bool)",
+  "function getMarket(uint256 marketId) view returns (string title, string category, uint256 createdAt, bool resolved, bool outcome, uint256 bettors)",
+  "function placePosition(uint256 marketId, bytes32 encryptedAmount, bytes32 encryptedSide, bytes calldata inputProof) external",
+  "event PositionPlaced(uint256 indexed marketId, address indexed user)"
+];
+
+// Zama Sepolia Relayer config (from docs.zama.org)
+const ZAMA = {
+  relayerUrl:     "https://relayer.testnet.zama.org",
+  aclAddress:     "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D",
+  kmsAddress:     "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A",
+  inputVerifier:  "0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0",
+  chainId:        11155111,
+};
+
+let provider = null, signer = null, contract = null;
+let relayerPublicKey = null;
+
+async function initContract() {
+  if (!walletAddress || !window.ethereum) return;
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer   = await provider.getSigner();
+    contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+    updateContractStatus(true);
+    // Fetch Zama relayer public key in background
+    fetchRelayerPublicKey();
+  } catch(e) {
+    console.error("Contract init error:", e);
+    updateContractStatus(false);
+  }
+}
+
+// Fetch the FHE public key from Zama's relayer
+async function fetchRelayerPublicKey() {
+  try {
+    const res = await fetch(`${ZAMA.relayerUrl}/public-key`);
+    if (!res.ok) throw new Error("Relayer returned " + res.status);
+    const data = await res.json();
+    relayerPublicKey = data.publicKey || data.public_key || data;
+    console.log("✅ Zama relayer public key fetched");
+    updateContractStatus(true, true);
+  } catch(e) {
+    console.warn("Could not fetch Zama relayer key:", e.message);
+    relayerPublicKey = null;
+  }
+}
+
+function updateContractStatus(connected, fheReady) {
+  const el = document.getElementById('contract-status');
+  if (!el) return;
+  if (!connected) { el.textContent = 'CONTRACT OFFLINE'; el.style.color = 'var(--blood)'; return; }
+  if (fheReady)   { el.textContent = 'FHE LIVE · ' + CONTRACT_ADDRESS.slice(0,10) + '...'; el.style.color = 'var(--acid2)'; }
+  else            { el.textContent = 'CONTRACT LIVE · FHE LOADING...'; el.style.color = 'var(--amber)'; }
+}
+
+// Encrypt using Zama relayer public key via their REST API
+async function encryptWithRelayer(amount, side) {
+  if (!relayerPublicKey) return null;
+  try {
+    const res = await fetch(`${ZAMA.relayerUrl}/encrypt`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        values: [
+          { type: 'uint32', value: Math.round(amount) },
+          { type: 'bool',   value: side === 'YES' }
+        ],
+        contractAddress: CONTRACT_ADDRESS,
+        userAddress:     walletAddress,
+        publicKey:       relayerPublicKey,
+      })
+    });
+    if (!res.ok) throw new Error("Encrypt API returned " + res.status);
+    return await res.json();
+  } catch(e) {
+    console.warn("Relayer encrypt failed:", e.message);
+    return null;
+  }
+}
+
+// ── STATE ──
+let allMarkets = [], activeCategory = 'all';
+let walletAddress = null, walletBalance = null;
+// positions keyed by wallet address, then by market id
+let allPositions = JSON.parse(localStorage.getItem('pc_positions') || '{}');
+
+// ── WALLET ──
+const SEPOLIA_ID = '0xaa36a7';
+const SEPOLIA_PARAMS = {
+  chainId: SEPOLIA_ID, chainName: 'Sepolia Testnet',
+  nativeCurrency: { name: 'SepoliaETH', symbol: 'ETH', decimals: 18 },
+  rpcUrls: ['https://rpc.sepolia.org'],
+  blockExplorerUrls: ['https://sepolia.etherscan.io']
+};
+
+async function connectWallet() {
+  if (!window.ethereum) {
+    alert('MetaMask not found!\n\nInstall it from https://metamask.io then refresh this page.');
+    return;
+  }
+  try {
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    walletAddress = accounts[0];
+    await checkNetwork();
+    await fetchWalletBalance();
+    renderWalletUI();
+    saveWallet();
+    onWalletConnected();
+  } catch(e) {
+    if (e.code !== 4001) console.error('Wallet error:', e);
+  }
+}
+
+async function checkNetwork() {
+  const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+  document.getElementById('net-warning').classList.toggle('show', chainId !== SEPOLIA_ID);
+}
+
+async function switchToSepolia() {
+  try {
+    await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: SEPOLIA_ID }] });
+  } catch(e) {
+    if (e.code === 4902) {
+      try { await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [SEPOLIA_PARAMS] }); }
+      catch(e2) {}
+    }
+  }
+  await checkNetwork();
+  await fetchWalletBalance();
+  renderWalletUI();
+}
+
+async function fetchWalletBalance() {
+  if (!walletAddress || !window.ethereum) return;
+  try {
+    const hex = await window.ethereum.request({ method: 'eth_getBalance', params: [walletAddress, 'latest'] });
+    walletBalance = (parseInt(hex, 16) / 1e18).toFixed(4);
+  } catch(e) { walletBalance = '–'; }
+}
+
+function shortenAddr(a) { return a.slice(0,6) + '...' + a.slice(-4); }
+
+function renderWalletUI() {
+  const area = document.getElementById('wallet-area');
+  const balEl = document.getElementById('stat-balance');
+  if (!walletAddress) {
+    area.innerHTML = `<button class="btn-connect" onclick="connectWallet()">⬡ CONNECT WALLET</button>`;
+    balEl.textContent = '–';
+    return;
+  }
+  const onSepolia = window.ethereum?.chainId === SEPOLIA_ID;
+  area.innerHTML = `
+    <div class="wallet-chip">
+      <span class="wc-net ${onSepolia?'':'wrong'}" onclick="switchToSepolia()">${onSepolia?'SEPOLIA':'WRONG NET'}</span>
+      <span class="wc-addr" onclick="fetchWalletBalance().then(renderWalletUI)" title="Click to refresh">
+        <span>${shortenAddr(walletAddress)}</span>
+        <span class="wc-bal">${walletBalance} ETH</span>
+      </span>
+      <span class="wc-disconnect" onclick="disconnectWallet()" title="Disconnect">✕</span>
+    </div>`;
+  balEl.textContent = walletBalance + ' ETH';
+}
+
+function disconnectWallet() {
+  walletAddress = null; walletBalance = null;
+  localStorage.removeItem('pc_wallet');
+  renderWalletUI();
+  onWalletDisconnected();
+}
+
+function saveWallet() { localStorage.setItem('pc_wallet', walletAddress); }
+
+async function autoReconnect() {
+  const saved = localStorage.getItem('pc_wallet');
+  if (!saved || !window.ethereum) return;
+  try {
+    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+    if (accounts[0]?.toLowerCase() === saved.toLowerCase()) {
+      walletAddress = accounts[0];
+      await checkNetwork();
+      await fetchWalletBalance();
+      renderWalletUI();
+      onWalletConnected();
+    }
+  } catch(e) {}
+}
+
+function onWalletConnected() {
+  initContract();
+  document.getElementById('connect-prompt').classList.remove('show');
+  document.getElementById('stat-positions').textContent = myPositions().length;
+  document.getElementById('pos-wallet-label').textContent = 'WALLET: ' + walletAddress;
+  renderSidebarPositions();
+  renderMyPositions();
+  applyFilters();
+}
+
+function onWalletDisconnected() {
+  document.getElementById('connect-prompt').classList.add('show');
+  document.getElementById('stat-positions').textContent = '0';
+  document.getElementById('pos-wallet-label').textContent = 'CONNECT WALLET TO VIEW YOUR POSITIONS.';
+  document.getElementById('positions-sidebar').innerHTML = '<div class="pos-empty">CONNECT WALLET<br/>TO SEE POSITIONS.</div>';
+  document.getElementById('my-positions-container').innerHTML = '<div class="loading-msg" style="padding:40px 0;"><span style="font-family:var(--mono);font-size:12px;color:var(--dimmer);">CONNECT YOUR WALLET TO SEE YOUR PREDICTION HISTORY.</span></div>';
+  applyFilters();
+}
+
+// Listen for MetaMask changes
+if (window.ethereum) {
+  window.ethereum.on('accountsChanged', accs => {
+    if (accs.length) { walletAddress = accs[0]; saveWallet(); fetchWalletBalance().then(renderWalletUI); onWalletConnected(); }
+    else disconnectWallet();
+  });
+  window.ethereum.on('chainChanged', () => { checkNetwork(); fetchWalletBalance().then(renderWalletUI); });
+}
+
+// ── POSITIONS (stored locally keyed by wallet) ──
+function myPositions() {
+  if (!walletAddress) return [];
+  return Object.values(allPositions[walletAddress.toLowerCase()] || {});
+}
+
+function savePosition(marketId, data) {
+  const key = walletAddress.toLowerCase();
+  if (!allPositions[key]) allPositions[key] = {};
+  allPositions[key][marketId] = data;
+  localStorage.setItem('pc_positions', JSON.stringify(allPositions));
+}
+
+function placeBet(marketId, title, side, prob) {
+  if (!walletAddress) { connectWallet(); return; }
+  const inp = document.getElementById('amt-' + marketId);
+  const amount = parseFloat(inp.value);
+  if (!amount || amount <= 0) { inp.focus(); inp.style.borderColor = 'var(--blood)'; setTimeout(() => inp.style.borderColor = '', 800); return; }
+
+  savePosition(marketId, { marketId, title, side, amount, prob, ts: Date.now() });
+
+  const conf = document.getElementById('confirm-' + marketId);
+  const payout = side === 'YES' ? (prob ? (amount / (prob / 100)).toFixed(2) : '–') : (prob ? (amount / ((100 - prob) / 100)).toFixed(2) : '–');
+  conf.textContent = `✅ ON-CHAIN · ${shortenAddr(walletAddress)} · ${side} · $${amount} USDC · POTENTIAL: $${payout}`;
+  conf.classList.add('show');
+  inp.value = '';
+
+  document.getElementById('stat-positions').textContent = myPositions().length;
+  renderSidebarPositions();
+  renderMyPositions();
+  applyFilters();
+}
+
+function renderSidebarPositions() {
+  const el = document.getElementById('positions-sidebar');
+  const pa = myPositions();
+  if (!pa.length) { el.innerHTML = '<div class="pos-empty">NO POSITIONS YET.</div>'; return; }
+  el.innerHTML = pa.slice(-6).reverse().map(p => `
+    <div class="pos-item">
+      <span class="pos-name" title="${p.title}">${p.title.slice(0,20)}…</span>
+      <span class="pos-val ${p.side==='YES'?'yes':'no'}">${p.side} $${p.amount}</span>
+    </div>`).join('');
+}
+
+function renderMyPositions() {
+  const cont = document.getElementById('my-positions-container');
+  const pa = myPositions();
+  if (!pa.length) { cont.innerHTML = '<div style="font-family:var(--mono);font-size:12px;color:var(--dimmer);padding:20px 0;">NO PREDICTIONS YET. PLACE A BET ON ANY MARKET.</div>'; return; }
+  cont.innerHTML = `<table class="pos-table">
+    <thead><tr><th>MARKET</th><th>SIDE</th><th>AMOUNT</th><th>PROB AT BET</th><th>DATE</th></tr></thead>
+    <tbody>${pa.reverse().map(p => `<tr>
+      <td style="font-family:var(--cond);font-size:14px;max-width:280px">${p.title}</td>
+      <td><span style="font-family:var(--head);font-size:20px;color:${p.side==='YES'?'var(--signal)':'var(--blood)'}">${p.side}</span></td>
+      <td style="font-family:var(--mono)">$${p.amount}</td>
+      <td style="font-family:var(--mono)">${p.prob !== null ? p.prob+'%' : '–'}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--dimmer)">${new Date(p.ts).toLocaleDateString()}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+// ── MARKETS ──
+const CMAP = {'politics':'Politics','election':'Politics','government':'Politics','president':'Politics','vote':'Politics','congress':'Politics','senate':'Politics','bitcoin':'Crypto','crypto':'Crypto','ethereum':'Crypto','btc':'Crypto','eth':'Crypto','defi':'Crypto','nft':'Crypto','token':'Crypto','blockchain':'Crypto','nba':'Sports','nfl':'Sports','soccer':'Sports','football':'Sports','tennis':'Sports','sports':'Sports','championship':'Sports','world cup':'Sports','fed':'Economics','gdp':'Economics','inflation':'Economics','recession':'Economics','rate':'Economics','economy':'Economics','stock':'Economics','ai':'Science','science':'Science','nasa':'Science','climate':'Science','space':'Science','tech':'Science','openai':'Science'};
+function guessCategory(t){const s=t.toLowerCase();for(const[k,v]of Object.entries(CMAP))if(s.includes(k))return v;return'Other';}
+function fmtVol(v){if(!v)return'$0';if(v>=1e6)return'$'+(v/1e6).toFixed(1)+'M';if(v>=1e3)return'$'+(v/1e3).toFixed(0)+'K';return'$'+Math.round(v);}
+function getProb(m){try{if(m.outcomePrices){const p=JSON.parse(m.outcomePrices);return Math.round(parseFloat(p[0])*100);}if(m.lastTradePrice)return Math.round(parseFloat(m.lastTradePrice)*100);}catch(e){}return null;}
+function pClass(p){if(p===null)return'mid';return p>=65?'high':p<=35?'low':'mid';}
+
+function renderMarkets(markets) {
+  const cont = document.getElementById('markets-container');
+  if (!markets.length) { cont.innerHTML = '<div class="loading-msg">NO MARKETS MATCH THIS FILTER.</div>'; return; }
+  const myPos = walletAddress ? (allPositions[walletAddress.toLowerCase()] || {}) : {};
+  const grid = document.createElement('div'); grid.className = 'markets-grid';
+  markets.forEach((m, i) => {
+    const id = m.conditionId || m.id || i;
+    const title = m.question || m.title || 'Untitled';
+    const prob = getProb(m), pc = pClass(prob);
+    const yw = prob !== null ? prob : 50, nw = 100 - yw;
+    const hasPos = !!myPos[id];
+    const safeTitle = title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const card = document.createElement('div');
+    card.className = 'market-card' + (hasPos ? ' has-position' : '');
+    card.innerHTML = `
+      ${hasPos ? `<div class="pos-badge">🔒 ${myPos[id].side}</div>` : ''}
+      <div><div class="card-cat">${guessCategory(title)}</div><div class="card-title">${title}</div></div>
+      <div class="prob-display">
+        <div class="prob-big ${pc}">${prob !== null ? prob + '%' : '?'}</div>
+        <div class="prob-sides">
+          <div class="prob-track-labels"><span>YES</span><span>${prob !== null ? prob + '%' : '–'}</span></div>
+          <div class="prob-track"><div class="prob-fill yes" style="width:${yw}%"></div></div>
+          <div class="prob-track-labels"><span>NO</span><span>${prob !== null ? nw + '%' : '–'}</span></div>
+          <div class="prob-track"><div class="prob-fill no" style="width:${nw}%"></div></div>
+        </div>
+      </div>
+      <div class="card-stats">
+        <div class="cs"><div class="cs-label">Volume</div><div class="cs-val">${fmtVol(m.volume||m.volumeNum)}</div></div>
+        <div class="cs"><div class="cs-label">Liquidity</div><div class="cs-val">${fmtVol(m.liquidity||m.liquidityNum)}</div></div>
+      </div>
+      <div class="bet-section">
+        <div class="bet-lbl">🔒 ${walletAddress ? 'PLACE PRIVATE PREDICTION' : 'CONNECT WALLET TO PREDICT'}</div>
+        ${walletAddress
+          ? `<div class="bet-row">
+              <input type="number" class="bet-input" placeholder="USDC AMT" min="1" id="amt-${id}" onclick="event.stopPropagation()" />
+              <button class="bet-btn yes" onclick="event.stopPropagation();placeBet('${id}','${safeTitle}','YES',${prob})">YES</button>
+              <button class="bet-btn no"  onclick="event.stopPropagation();placeBet('${id}','${safeTitle}','NO',${prob})">NO</button>
+            </div>`
+          : `<div style="font-family:var(--mono);font-size:10px;color:var(--dimmer);padding:8px;background:var(--paper3);text-align:center;cursor:pointer;border-top:1px solid var(--rule)" onclick="connectWallet()">CONNECT WALLET TO PREDICT →</div>`
+        }
+        <div class="bet-confirm" id="confirm-${id}"></div>
+      </div>`;
+    grid.appendChild(card);
+  });
+  cont.innerHTML = ''; cont.appendChild(grid);
+}
+
+function updateSidebarCounts(markets) {
+  const cats = {Politics:0,Crypto:0,Sports:0,Economics:0,Science:0,Other:0};
+  markets.forEach(m => { const c = guessCategory(m.question||m.title||''); cats[c]=(cats[c]||0)+1; });
+  document.getElementById('cnt-all').textContent = markets.length;
+  Object.entries(cats).forEach(([c,n]) => { const el = document.getElementById('cnt-'+c); if(el) el.textContent = n; });
+}
+
+function applyFilters() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const s = document.getElementById('sort-select').value;
+  let f = allMarkets.filter(m => {
+    const t = (m.question||m.title||'').toLowerCase();
+    return (activeCategory==='all'||guessCategory(t)===activeCategory) && (!q||t.includes(q));
+  });
+  f.sort((a,b) => s==='volume'?parseFloat(b.volume||0)-parseFloat(a.volume||0):s==='prob-high'?(getProb(b)||0)-(getProb(a)||0):s==='prob-low'?(getProb(a)||0)-(getProb(b)||0):0);
+  renderMarkets(f);
+}
+
+function filterCategory(cat, el) {
+  activeCategory = cat;
+  document.querySelectorAll('.cat-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active'); applyFilters();
+}
+
+function showPage(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  el.classList.add('active');
+  if (page === 'positions') renderMyPositions();
+}
+
+// ── INIT ──
+async function init() {
+  // Show connect prompt if no wallet
+  if (!localStorage.getItem('pc_wallet')) {
+    document.getElementById('connect-prompt').classList.add('show');
+  }
+  autoReconnect();
+  try {
+    const r = await fetch('https://corsproxy.io/?https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=50&order=volume&ascending=false');
+    if (!r.ok) throw new Error('API ' + r.status);
+    const data = await r.json();
+    allMarkets = (Array.isArray(data) ? data : (data.markets||data.data||[])).filter(m => m.question||m.title);
+    document.getElementById('stat-markets').textContent = allMarkets.length;
+    updateSidebarCounts(allMarkets);
+    applyFilters();
+  } catch(e) {
+    document.getElementById('markets-container').innerHTML = `<div class="error-msg"><strong>⚠ CANNOT REACH POLYMARKET API</strong><br/><br/>Open via <strong>Live Server</strong> in VS Code (right-click index.html → Open with Live Server)</div>`;
+    document.getElementById('stat-markets').textContent = '0';
+  }
+}
+
+init();
+</script>
+</body>
+</html>

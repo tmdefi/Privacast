@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PrivaCast — Private Prediction Market</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=Barlow+Condensed:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+
+<!-- TICKER -->
+<div class="ticker" aria-hidden="true">
+  <span class="ticker-inner">
+    &nbsp;&nbsp;PRIVACAST · PRIVATE PREDICTION MARKET<span class="tsep">///</span>POLYMARKET LIVE DATA<span class="tsep">///</span>ZAMA FHE ENCRYPTION ACTIVE<span class="tsep">///</span>SEPOLIA TESTNET<span class="tsep">///</span>YOUR BETS ARE INVISIBLE ON-CHAIN<span class="tsep">///</span>PRIVACAST · PRIVATE PREDICTION MARKET<span class="tsep">///</span>POLYMARKET LIVE DATA<span class="tsep">///</span>ZAMA FHE ENCRYPTION ACTIVE<span class="tsep">///</span>SEPOLIA TESTNET<span class="tsep">///</span>YOUR BETS ARE INVISIBLE ON-CHAIN<span class="tsep">///</span>
+  </span>
+</div>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="logo-block">
+    <div>
+      <div class="logo-text">PRIVACAST</div>
+      <div class="logo-sub">PRIVATE PREDICTION MARKET</div>
+    </div>
+    <div class="stage-tag">STAGE 4</div>
+  </div>
+  <nav class="topbar-nav">
+    <div class="nav-tab active" data-page="markets">Markets</div>
+    <div class="nav-tab" data-page="positions">My Positions</div>
+  </nav>
+  <div class="topbar-right">
+    <div class="fhe-pill"><div class="sdot"></div><span id="fhe-status">FHE INITIALISING...</span></div>
+    <div id="wallet-area">
+      <button class="btn-connect" id="connect-btn">⬡ CONNECT WALLET</button>
+    </div>
+  </div>
+</header>
+
+<!-- NETWORK WARNING -->
+<div class="net-warning" id="net-warning">
+  ⚠ &nbsp; WRONG NETWORK — CLICK TO SWITCH TO SEPOLIA TESTNET
+</div>
+
+<div class="main">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-head">FILTER</div>
+    <div class="cat-item active" data-cat="all">All Markets <span class="cat-count" id="cnt-all">–</span></div>
+    <div class="cat-item" data-cat="Politics">Politics <span class="cat-count" id="cnt-Politics">–</span></div>
+    <div class="cat-item" data-cat="Crypto">Crypto <span class="cat-count" id="cnt-Crypto">–</span></div>
+    <div class="cat-item" data-cat="Sports">Sports <span class="cat-count" id="cnt-Sports">–</span></div>
+    <div class="cat-item" data-cat="Economics">Economics <span class="cat-count" id="cnt-Economics">–</span></div>
+    <div class="cat-item" data-cat="Science">Science <span class="cat-count" id="cnt-Science">–</span></div>
+    <div class="cat-item" data-cat="Other">Other <span class="cat-count" id="cnt-Other">–</span></div>
+    <div class="positions-panel">
+      <div class="pos-head">MY POSITIONS</div>
+      <div id="positions-sidebar"><div class="pos-empty">CONNECT WALLET<br/>TO SEE POSITIONS.</div></div>
+    </div>
+  </aside>
+
+  <!-- CONTENT -->
+  <div class="content">
+    <div class="stats-bar">
+      <div class="stat-cell"><div class="stat-lbl">LIVE MARKETS</div><div class="stat-num" id="stat-markets">–</div><div class="stat-note">POLYMARKET API</div></div>
+      <div class="stat-cell"><div class="stat-lbl">MY POSITIONS</div><div class="stat-num" id="stat-positions">0</div><div class="stat-note">THIS WALLET</div></div>
+      <div class="stat-cell"><div class="stat-lbl">WALLET BALANCE</div><div class="stat-num" id="stat-balance">–</div><div class="stat-note">SEPOLIA ETH</div></div>
+      <div class="stat-cell"><div class="stat-lbl">ENCRYPTION</div><div class="stat-num accent" id="stat-fhe">–</div><div class="stat-note">ZAMA FHEVM</div></div>
+    </div>
+
+    <!-- MARKETS PAGE -->
+    <div class="page active" id="page-markets">
+      <div class="connect-prompt" id="connect-prompt">
+        <div class="cp-icon">🔒</div>
+        <div class="cp-head">CONNECT YOUR WALLET</div>
+        <div class="cp-sub">Your wallet is your identity. Connect MetaMask on Sepolia and your bets will be encrypted using Zama's FHE — invisible even to the blockchain.</div>
+        <button class="cp-btn" id="connect-prompt-btn">⬡ CONNECT METAMASK</button>
+        <div class="cp-note">MARKETS LOAD BELOW WHILE YOU DECIDE</div>
+      </div>
+      <div class="toolbar">
+        <div class="search-cell"><span class="search-lbl">⌕</span><input type="text" id="search-input" placeholder="SEARCH MARKETS..." /></div>
+        <div class="sort-cell">
+          <select id="sort-select" title="Sort markets by" aria-label="Sort markets by">
+            <option value="volume">SORT: VOLUME</option>
+            <option value="prob-high">PROB: HIGH → LOW</option>
+            <option value="prob-low">PROB: LOW → HIGH</option>
+          </select>
+        </div>
+        <div class="priv-note"><div class="lock-sq">🔒</div>ZAMA FHE · SEPOLIA TESTNET</div>
+      </div>
+      <div class="scroll-area">
+        <div id="markets-container"><div class="loading-msg"><span class="loading-spin">◌</span><br/>LOADING LIVE MARKETS...</div></div>
+      </div>
+    </div>
+
+    <!-- POSITIONS PAGE -->
+    <div class="page" id="page-positions">
+      <div class="scroll-area">
+        <div class="positions-title">MY POSITIONS</div>
+        <div id="pos-wallet-label">CONNECT WALLET TO VIEW YOUR POSITIONS.</div>
+        <div id="my-positions-container"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span>DATA <em>POLYMARKET GAMMA API</em></span>
+  <span>CONTRACT <em id="contract-status">NOT CONNECTED</em> &nbsp;·&nbsp; NETWORK <em>SEPOLIA TESTNET</em></span>
+</footer>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
